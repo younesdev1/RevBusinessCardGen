@@ -5,6 +5,8 @@ import config
 import uuid
 import traceback
 from logging import info, error, basicConfig, INFO, ERROR
+from datetime import date
+import csv
 
 
 class RevGen:
@@ -46,6 +48,8 @@ class RevGen:
             'accept-language': 'en-US;q=0.9',
             'cookie': f'token={config.REV_TOKEN}',        
         }
+
+        
         
         self.s = requests.Session()
 
@@ -68,7 +72,10 @@ class RevGen:
             labeled = self.label_cards(n)
             if labeled:
                 self.log_info(f"Labeled Card {n}")
-
+                if config.SMS_VERIFICATION:
+                    self.get_card_details()
+                    
+        
 
 
                 
@@ -156,6 +163,7 @@ class RevGen:
         )
         
         if "This action is forbidden" in response.text:
+
             raise RuntimeError("Token Expired")
         
           
@@ -170,7 +178,9 @@ class RevGen:
         self.log_info("Labeling Card")   
         
         payload = {"label": f"{config.CARD_PREFIX} {prefix}"} 
-        
+
+        self.card_name = f"{config.CARD_PREFIX}{prefix}"
+
         response = self.s.patch(
             f'{self.BASE_URL}/card/{self.card_id}/label',
             headers=self.headers_post,
@@ -180,9 +190,63 @@ class RevGen:
         try:
             return response.json()["state"] == "ACTIVE"
         except:
-            self.log_error(f"Error Parsing API: {response.status_code} - {response.text} - {traceback.format_exc()}")           
+            self.log_error(f"Error Parsing API: {response.status_code} - {response.text} - {traceback.format_exc()}") 
+
+    def get_card_details(self):
+        response = self.s.get(
+            f"{self.BASE_URL}/card/{self.card_id}/image/unmasked?encrypt=false",
+            headers=self.headers_get
+        )
+        Resend = True
+        while Resend:
+            self.sms_code = input(f'[{self.card_name}] Enter sms code (type "1" to send sms again): ') 
+            if self.sms_code == "1":
+                response = self.s.get(
+                    f"{self.BASE_URL}/card/{self.card_id}/image/unmasked?encrypt=false",
+                    headers=self.headers_get
+                )    
+            else:
+                Resend = False
+
+        self.verify_headers = {
+            'pragma': 'no-cache',
+            'cache-control': 'no-cache',
+            'sec-ch-ua': '"Google Chrome";v="93", " Not;A Brand";v="99", "Chromium";v="93"',
+            'accept': 'application/json, text/plain, */*',
+            'sec-ch-ua-mobile': '?0',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36',
+            'x-device-id': config.DEVICE_ID,
+            'sec-ch-ua-platform': '"Windows"',
+            'sec-fetch-site': 'same-origin',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-dest': 'empty',
+            'referer': 'https://business.revolut.com/',
+            'accept-language': 'en-US;q=0.9',
+            'cookie': f'token={config.REV_TOKEN}', 
+            'x-verify-code': f'{self.sms_code}',
+        }
+        response = self.s.get(
+            f"{self.BASE_URL}/card/{self.card_id}/image/unmasked?encrypt=false",
+            headers=self.verify_headers
+        )
+        try:
+            self.card_num = response.json()["pan"]
+            self.card_cvv = response.json()["cvv"]
+            self.card_exp_month = f'0{str(date.today().month)}'
+            self.card_exp_year = str(date.today().year + 5)
+            self.write_card_details()
+        except:
+            choice = input(f'[{self.card_name}] Wrong sms code wanna try again? y/n: ')
+            if choice == "y":
+                self.get_card_details()
+            else:
+                return
         
 
+
+    def write_card_details(self):
+        with open('cards.csv','a') as fd:
+            fd.write(f'\n{self.card_name},{self.card_num},{self.card_exp_month},{self.card_exp_year},{self.card_cvv}')
 
 if __name__ == "__main__":
     pass
