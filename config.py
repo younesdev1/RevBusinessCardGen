@@ -4,6 +4,7 @@ GEN_NUMBER = 200 #HOW MANY CARDS TO GEN
 EMPLOYEE_EMAIL = "" #WHICH TEAM MEMBER TO USE
 CARD_PREFIX = "CARD_" #USED TO LABEL GENERATED CARDS
 
+SMS_VERIFICATION = True #USE True if you want to confirm sms code and store card information in "cards.csv"
 
 
 
