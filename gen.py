@@ -7,6 +7,7 @@ import traceback
 from logging import info, error, basicConfig, INFO, ERROR
 from datetime import date
 import csv
+import time
 
 
 class RevGen:
@@ -66,12 +67,12 @@ class RevGen:
         self.get_members()
         
         for n in range(0, int(config.GEN_NUMBER)):
-            self.log_info(f"Generating Card {n}")
+            self.log_info(f"Generating Card {n+config.START_WITH_INDEX}")
             self.gen_cards()
-            self.log_info(f"Generated Card {n}")
-            labeled = self.label_cards(n)
+            self.log_info(f"Generated Card {n+config.START_WITH_INDEX}")
+            labeled = self.label_cards(n+config.START_WITH_INDEX)
             if labeled:
-                self.log_info(f"Labeled Card {n}")
+                self.log_info(f"Labeled Card {n+config.START_WITH_INDEX}")
                 if config.SMS_VERIFICATION:
                     self.get_card_details()
                     
@@ -191,20 +192,29 @@ class RevGen:
             return response.json()["state"] == "ACTIVE"
         except:
             self.log_error(f"Error Parsing API: {response.status_code} - {response.text} - {traceback.format_exc()}") 
+    def send_sms(self):
+        resp_code = 'resp'
+        print(f'[{self.card_name}] Sending SMS...')
+        while not '"Verification required","code":9014,"factor":"SMS"' in resp_code:
+            response = self.s.get(
+                f"{self.BASE_URL}/card/{self.card_id}/image/unmasked?encrypt=false",
+                headers=self.headers_get
+            )
+            resp_code = response.text
+            if '"Cannot create a new verification code at that moment","code":9015' in resp_code:
+                print(f'[{self.card_name}] Error sending SMS waiting 5 seconds...')
+                time.sleep(5)
+
+        print(f'[{self.card_name}] SMS code sent')
+
 
     def get_card_details(self):
-        response = self.s.get(
-            f"{self.BASE_URL}/card/{self.card_id}/image/unmasked?encrypt=false",
-            headers=self.headers_get
-        )
+        self.send_sms()
         Resend = True
         while Resend:
             self.sms_code = input(f'[{self.card_name}] Enter sms code (type "1" to send sms again): ') 
             if self.sms_code == "1":
-                response = self.s.get(
-                    f"{self.BASE_URL}/card/{self.card_id}/image/unmasked?encrypt=false",
-                    headers=self.headers_get
-                )    
+                self.send_sms()  
             else:
                 Resend = False
 
