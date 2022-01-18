@@ -29,6 +29,9 @@ Before you begin, ensure you have met the following requirements:
 
 
 
+## Device Id Request
+
+![image](https://user-images.githubusercontent.com/42220507/150025784-35791720-ed74-4eda-af5f-a862cf9bd75f.png)
 
 
 
