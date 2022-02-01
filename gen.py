@@ -1,12 +1,9 @@
 import datetime
 import requests
-import json
 import config
-import uuid
 import traceback
 from logging import info, error, basicConfig, INFO, ERROR
 from datetime import date
-import csv
 import time
 import pathlib
 
