@@ -8,12 +8,14 @@ from logging import info, error, basicConfig, INFO, ERROR
 from datetime import date
 import csv
 import time
-
+import pathlib
 
 class RevGen:
     
     def __init__(self) -> None:
         
+        
+        self.ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36"
         
         self.headers_post =  {
             'pragma': 'no-cache',
@@ -21,7 +23,7 @@ class RevGen:
             'sec-ch-ua': '"Chromium";v="92", " Not A;Brand";v="99", "Google Chrome";v="92"',
             'accept': 'application/json, text/plain, /',
             'sec-ch-ua-mobile': '?0',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.159 Safari/537.36',
+            'user-agent': self.ua,
             'x-device-id': config.DEVICE_ID,
             'content-type': 'application/json;charset=UTF-8',
             'origin': 'https://business.revolut.com/',
@@ -39,7 +41,7 @@ class RevGen:
             'sec-ch-ua': '"Google Chrome";v="93", " Not;A Brand";v="99", "Chromium";v="93"',
             'accept': 'application/json, text/plain, */*',
             'sec-ch-ua-mobile': '?0',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36',
+            'user-agent': self.ua,
             'x-device-id': config.DEVICE_ID,
             'sec-ch-ua-platform': '"Windows"',
             'sec-fetch-site': 'same-origin',
@@ -53,6 +55,8 @@ class RevGen:
         
         
         self.s = requests.Session()
+        self.csv_location = f'{pathlib.Path(__file__).parent.resolve()}\\cards.csv'
+        
 
         
               
@@ -224,7 +228,7 @@ class RevGen:
             'sec-ch-ua': '"Google Chrome";v="93", " Not;A Brand";v="99", "Chromium";v="93"',
             'accept': 'application/json, text/plain, */*',
             'sec-ch-ua-mobile': '?0',
-            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/93.0.4577.63 Safari/537.36',
+            'user-agent': self.ua,
             'x-device-id': config.DEVICE_ID,
             'sec-ch-ua-platform': '"Windows"',
             'sec-fetch-site': 'same-origin',
@@ -255,7 +259,7 @@ class RevGen:
 
 
     def write_card_details(self):
-        with open('cards.csv','a') as fd:
+        with open(self.csv_location, 'a') as fd:
             fd.write(f'\n{self.card_name},{self.card_num},{self.card_exp_month},{self.card_exp_year},{self.card_cvv}')
 
 if __name__ == "__main__":
