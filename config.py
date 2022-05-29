@@ -1,5 +1,9 @@
+EMAIL = "" #Login Email Address
+PASSWORD = "" # Login Password
+
 REV_TOKEN =  ""  #COOKIES (Token)
-DEVICE_ID = "" #x-device-id, all requests
+DEVICE_ID = "" #x-device-id, all requests - No need to supply if email/password are filled
+COPY_ONLY = False #Copy only, gen
 GEN_NUMBER = 200 #HOW MANY CARDS TO GEN
 EMPLOYEE_EMAIL = "" #WHICH TEAM MEMBER TO USE
 CARD_PREFIX = "CARD_" #USED TO LABEL GENERATED CARDS

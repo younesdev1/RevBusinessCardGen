@@ -1,23 +1,27 @@
 import datetime
-import requests
 import config
 import traceback
 from logging import info, error, basicConfig, INFO, ERROR
 from datetime import date
 import time
 import pathlib
+import uuid
+import cloudscraper
+import os
 
 class RevGen:
     
     def __init__(self) -> None:
         
         
-        self.ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/97.0.4692.99 Safari/537.36"
+        self.ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.67 Safari/537.36"
+        if config.DEVICE_ID == "":
+            config.DEVICE_ID = str(uuid.uuid4())
         
         self.headers_post =  {
             'pragma': 'no-cache',
             'cache-control': 'no-cache',
-            'sec-ch-ua': '"Chromium";v="92", " Not A;Brand";v="99", "Google Chrome";v="92"',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
             'accept': 'application/json, text/plain, /',
             'sec-ch-ua-mobile': '?0',
             'user-agent': self.ua,
@@ -29,13 +33,12 @@ class RevGen:
             'sec-fetch-dest': 'empty',
             'referer': 'https://business.revolut.com/',
             'accept-language': 'en-US;q=0.9',
-            'cookie': f'token={config.REV_TOKEN}',
         }
         
         self.headers_get = {
             'pragma': 'no-cache',
             'cache-control': 'no-cache',
-            'sec-ch-ua': '"Google Chrome";v="93", " Not;A Brand";v="99", "Chromium";v="93"',
+            'sec-ch-ua': '" Not A;Brand";v="99", "Chromium";v="101", "Google Chrome";v="101"',
             'accept': 'application/json, text/plain, */*',
             'sec-ch-ua-mobile': '?0',
             'user-agent': self.ua,
@@ -46,17 +49,17 @@ class RevGen:
             'sec-fetch-dest': 'empty',
             'referer': 'https://business.revolut.com/',
             'accept-language': 'en-US;q=0.9',
-            'cookie': f'token={config.REV_TOKEN}',        
         }
 
-        
-        
-        self.s = requests.Session()
+        self.s = cloudscraper.create_scraper(requestPreHook=self.pre_hook)
         self.csv_location = f'{pathlib.Path(__file__).parent.resolve()}\\cards.csv'
         
-
+        if config.EMAIL == "" or config.PASSWORD == "" and config.REV_TOKEN == "":
+            raise RuntimeError("Email and Password or Rev Token are empty, supply at least one")
         
-              
+        if config.EMAIL != "" and config.PASSWORD != "":
+            self.login()  
+                
         self.business_id = self.get_business()
         if not self.business_id:
             raise RuntimeError("Cannot Get Business API")
@@ -68,24 +71,45 @@ class RevGen:
         self.get_members()
         
         for n in range(0, int(config.GEN_NUMBER)):
-            self.log_info(f"Generating Card {n+config.START_WITH_INDEX}")
-            self.gen_cards()
-            self.log_info(f"Generated Card {n+config.START_WITH_INDEX}")
-            labeled = self.label_cards(n+config.START_WITH_INDEX)
-            if labeled:
-                self.log_info(f"Labeled Card {n+config.START_WITH_INDEX}")
+            if not config.COPY_ONLY:
+                self.log_info(f"Generating Card {n+config.START_WITH_INDEX}")
+                self.gen_cards()
+                self.log_info(f"Generated Card {n+config.START_WITH_INDEX}")
+                labeled = self.label_cards(n+config.START_WITH_INDEX)
+                if labeled:
+                    self.log_info(f"Labeled Card {n+config.START_WITH_INDEX}")
+                    self.card_exp_month = f'0{str(date.today().month)}'
+                    self.card_exp_year = str(date.today().year + 5)
                 if config.SMS_VERIFICATION:
                     self.get_card_details()
+            else:
+                self.get_all_cards()
+                for key,value in self.cards.items():
+                    self.card_id = key
+                    self.card_name = value["name"]
+                    self.card_exp_month = value["expiryDate"].split("/")[0]
+                    self.card_exp_year = value["expiryDate"].split("/")[1]
+                    self.log_info(f"Retrieved Card {self.card_name}")
+                    if config.SMS_VERIFICATION:
+                        self.get_card_details()
                     
         
-
+    def pre_hook(self, request, method, url, *args, **kwargs):
+        if hasattr(self,"expires"):
+            if self.expires < time.time():
+                self.login()
+        if not self.s.cookies.get("token", None) and config.REV_TOKEN != "":
+            self.s.cookies["token"] = config.REV_TOKEN
+            
+        return method, url, args, kwargs
+        
 
                 
     @staticmethod
     def log_info(*args, **kwargs):
-        
+        os.system("")
         timestamp = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
-        st,en = '\033[92m','\033[0m'
+        st,en = '\033[92m','\033[0m '
         output =  f"{st}[{str(timestamp)}] {args[0]}{en}"
         basicConfig(format="%(message)s", level=INFO)
         info(output)  
@@ -93,15 +117,66 @@ class RevGen:
         
     @staticmethod
     def log_error(*args, **kwargs):
-        st,en = '\033[91m','\033[0m'
+        os.system("")
+        st,en = '\033[91m','\033[0m '
         timestamp = datetime.datetime.now().strftime('%H:%M:%S.%f')[:-3]
         output =  f"{st}[{str(timestamp)}] {args[0]}{en}"
         basicConfig(format="%(message)s", level=ERROR)
         error(output)  
                       
+    def login(self):
+        
+        self.log_info(f"Logging in")
+        
+        json_data = {
+            'email': config.EMAIL,
+            'password': config.PASSWORD
+        }
+
+        response = self.s.post(
+            'https://business.revolut.com/api/signin',
+            headers=self.headers_post,
+            json=json_data
+        )        
+        try:
+            parsed = response.json()
+            config.REV_TOKEN = self.s.cookies["token"]
+        except:
+            RuntimeError(f"Error Parsing API: {response.status_code} - {response.text}")
+                    
+        if "userId" not in parsed:
+            raise RuntimeError(f"Cannot Login: {parsed}")
+        
+        response = self.s.post('https://business.revolut.com/api/2fa/signin/verify', headers=self.headers_post)
+        try:
+            parsed = response.json()
+            verification_token = parsed["verificationTokenId"]
+        except:
+            raise RuntimeError(f"Error Parsing API: {response.status_code} - {response.text}")
+        
+        response = self.s.get(f'https://business.revolut.com/api/verification/{verification_token}/status', headers=self.headers_get)
+        parsed = response.json() 
+        
+        while parsed["state"] != "VERIFIED":
+            self.log_info(f"Waiting for App confirmation")
+            time.sleep(2)
+            response = self.s.get(f'https://business.revolut.com/api/verification/{verification_token}/status', headers=self.headers_get)
+            parsed = response.json() 
+            
+        code = parsed["code"]
+        headers = self.headers_post.copy()
+        headers["x-verify-code"] = code
+        
+        verify = self.s.post('https://business.revolut.com/api/2fa/signin/verify', headers=headers)
+        try:
+            parsed = verify.json()
+            self.expires = parsed["expireAt"]
+            config.REV_TOKEN = self.s.cookies["token"]
+        except:
+            raise RuntimeError(f"Error Parsing API: {response.status_code} - {response.text}")        
+
         
     def get_business(self):
-        
         self.log_info("Getting Business")
         
         response = self.s.get(
@@ -143,9 +218,31 @@ class RevGen:
                 self.employee_id = ""
                 
             self.user_id = self.current_member["user"]["id"]
+
         except:
             self.log_error(f"Error Parsing API: {response.status_code} - {response.text} - {traceback.format_exc()}")   
             
+    def get_all_cards(self):
+        
+        response = self.s.get(
+            f'{self.BASE_URL}/team/members/current-member/cards',
+            headers=self.headers_get
+        )
+        
+        if "This action is forbidden" in response.text:
+            raise RuntimeError("Token Expired")
+        
+        try:
+            self.cards = {}
+            parsed = response.json()
+            for x in parsed:
+                self.cards[x["payload"]["id"]] = {
+                    "name": x["payload"]["name"], 
+                    "expiryDate": x["payload"]["expiryDate"],
+                }
+            self.user_id = self.current_member["user"]["id"]
+        except:
+            self.log_error(f"Error Parsing API: {response.status_code} - {response.text} - {traceback.format_exc()}")           
     
     def gen_cards(self):
         
@@ -193,6 +290,8 @@ class RevGen:
             return response.json()["state"] == "ACTIVE"
         except:
             self.log_error(f"Error Parsing API: {response.status_code} - {response.text} - {traceback.format_exc()}") 
+            
+            
     def send_sms(self):
         resp_code = 'resp'
         print(f'[{self.card_name}] Sending SMS...')
@@ -243,8 +342,6 @@ class RevGen:
         try:
             self.card_num = response.json()["pan"]
             self.card_cvv = response.json()["cvv"]
-            self.card_exp_month = f'0{str(date.today().month)}'
-            self.card_exp_year = str(date.today().year + 5)
             self.write_card_details()
         except:
             choice = input(f'[{self.card_name}] Wrong sms code wanna try again? y/n: ')
