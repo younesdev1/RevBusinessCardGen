@@ -1,5 +1,5 @@
 # RevBusinessCardGen
-Easily Generate Revolut Business Cards
+Easily Generate And Save Revolut Business Cards
 
 ## Prerequisites
 
