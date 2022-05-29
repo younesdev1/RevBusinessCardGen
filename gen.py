@@ -70,28 +70,29 @@ class RevGen:
         
         self.get_members()
         
-        for n in range(0, int(config.GEN_NUMBER)):
-            if not config.COPY_ONLY:
-                self.log_info(f"Generating Card {n+config.START_WITH_INDEX}")
-                self.gen_cards()
-                self.log_info(f"Generated Card {n+config.START_WITH_INDEX}")
-                labeled = self.label_cards(n+config.START_WITH_INDEX)
-                if labeled:
-                    self.log_info(f"Labeled Card {n+config.START_WITH_INDEX}")
-                    self.card_exp_month = f'0{str(date.today().month)}'
-                    self.card_exp_year = str(date.today().year + 5)
+        if config.COPY_ONLY:
+            self.get_all_cards()
+            for key,value in self.cards.items():
+                self.card_id = key
+                self.card_name = value["name"]
+                self.card_exp_month = value["expiryDate"].split("/")[0]
+                self.card_exp_year = value["expiryDate"].split("/")[1]
+                self.log_info(f"Retrieved Card {self.card_name}")
                 if config.SMS_VERIFICATION:
                     self.get_card_details()
-            else:
-                self.get_all_cards()
-                for key,value in self.cards.items():
-                    self.card_id = key
-                    self.card_name = value["name"]
-                    self.card_exp_month = value["expiryDate"].split("/")[0]
-                    self.card_exp_year = value["expiryDate"].split("/")[1]
-                    self.log_info(f"Retrieved Card {self.card_name}")
+        else:
+            for n in range(0, int(config.GEN_NUMBER)):
+                    self.log_info(f"Generating Card {n+config.START_WITH_INDEX}")
+                    self.gen_cards()
+                    self.log_info(f"Generated Card {n+config.START_WITH_INDEX}")
+                    labeled = self.label_cards(n+config.START_WITH_INDEX)
+                    if labeled:
+                        self.log_info(f"Labeled Card {n+config.START_WITH_INDEX}")
+                        self.card_exp_month = f'0{str(date.today().month)}'
+                        self.card_exp_year = str(date.today().year + 5)
                     if config.SMS_VERIFICATION:
                         self.get_card_details()
+
                     
         
     def pre_hook(self, request, method, url, *args, **kwargs):
