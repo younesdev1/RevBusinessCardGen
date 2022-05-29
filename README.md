@@ -1,5 +1,5 @@
 # RevBusinessCardGen
-Easily Generate Revolut Business Cards
+Easily Generate And Save Revolut Business Cards
 
 ## Prerequisites
 
@@ -15,12 +15,17 @@ Before you begin, ensure you have met the following requirements:
   ```
   
  ## Config
- 
-- `REV_TOKEN` # Get it after logging in revolut by looking in cookies, find `token` and copy paste the value
-- `DEVICE_ID` = "" # Get it after logging in revolut by looking in a random request, find `x-device-id` in request headers, is the last one
+
+- `EMAIL` # Your login email
+- `PASSWORD` # Your login password
+
+- `REV_TOKEN` # Get it after logging in revolut by looking in cookies, find `token` and copy paste the value (no need to supply if email & password are filled)
+- `DEVICE_ID` = "" # Get it after logging in revolut by looking in a random request, find `x-device-id` in request headers, is the last one (no need to supply if email & password are filled)
+- `COPY_ONLY` # Fill `True` if you want the script only to copy existing cards instead of genning too.
 - `GEN_NUMBER` = 200 # Input the number of cards you want to gen
 - `EMPLOYEE_EMAIL` = "" # Input the email of the user you want to gen cards with
 - `CARD_PREFIX` = "CARD_" # Input a string that will be in the card name (card names will be `{CARD_PREFIX}_1,{CARD_PREFIX}_2,...`
+- `SMS_VERIFICATION` #Use True if you want to confirm sms code and store card information in "cards.csv"
 
 
 ## Troubleshooting
