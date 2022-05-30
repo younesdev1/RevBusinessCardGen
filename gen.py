@@ -99,8 +99,8 @@ class RevGen:
         if hasattr(self,"expires"):
             if self.expires < time.time():
                 self.login()
-        if not self.s.cookies.get("token", None) and config.REV_TOKEN != "":
-            self.s.cookies["token"] = config.REV_TOKEN
+        if not self.s.cookies.get("token", domain="business.revolut.com") and config.REV_TOKEN != "":
+            self.s.cookies.set("token", confi.REV_TOKEN, domain="business.revolut.com")
             
         return method, url, args, kwargs
         
