@@ -25,6 +25,8 @@ Before you begin, ensure you have met the following requirements:
 - `GEN_NUMBER` = 200 # Input the number of cards you want to gen
 - `EMPLOYEE_EMAIL` = "" # Input the email of the user you want to gen cards with
 - `CARD_PREFIX` = "CARD_" # Input a string that will be in the card name (card names will be `{CARD_PREFIX}_1,{CARD_PREFIX}_2,...`
+- `START_WITH_INDEX` = 0 # INDEX WITH YOU WANT TO START CREATING YOUR CARD / COPYING YOUR CARDS EX. (44) {CARD_PREFIX}_44, {CARD_PREFIX}_45...
+
 - `SMS_VERIFICATION` #Use True if you want to confirm sms code and store card information in "cards.csv"
 
 
