@@ -72,14 +72,21 @@ class RevGen:
         
         if config.COPY_ONLY:
             self.get_all_cards()
-            for key,value in self.cards.items():
-                self.card_id = key
-                self.card_name = value["name"]
-                self.card_exp_month = value["expiryDate"].split("/")[0]
-                self.card_exp_year = value["expiryDate"].split("/")[1]
-                self.log_info(f"Retrieved Card {self.card_name}")
-                if config.SMS_VERIFICATION:
-                    self.get_card_details()
+            if config.START_WITH_INDEX != 0:
+                self.log_info(f"Copying from index: {config.START_WITH_INDEX}")
+                self.cards = list(self.cards.items())
+                for i in range(config.START_WITH_INDEX, len(self.cards)):
+                    self.card_id = self.cards[i][0]
+                    self.card_name = self.cards[i][1]["name"]
+                    self.card_exp_month = self.cards[i][1]["expiryDate"].split("/")[0]
+                    self.card_exp_year = self.cards[i][1]["expiryDate"].split("/")[1]
+                    self.log_info(f"Retrieved Card {self.card_name}")
+                    if config.SMS_VERIFICATION:
+                        self.get_card_details()
+            else:
+                self.log_info("Copying all cards details")
+                self.copy_all_cards()
+                
         else:
             for n in range(0, int(config.GEN_NUMBER)):
                     self.log_info(f"Generating Card {n+config.START_WITH_INDEX}")
@@ -352,6 +359,15 @@ class RevGen:
                 return
         
 
+    def copy_all_cards(self):
+        for key,value in self.cards.items():
+                    self.card_id = key
+                    self.card_name = value["name"]
+                    self.card_exp_month = value["expiryDate"].split("/")[0]
+                    self.card_exp_year = value["expiryDate"].split("/")[1]
+                    self.log_info(f"Retrieved Card {self.card_name}")
+                    if config.SMS_VERIFICATION:
+                        self.get_card_details()
 
     def write_card_details(self):
         with open(self.csv_location, 'a') as fd:
